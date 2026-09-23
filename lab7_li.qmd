@@ -1,0 +1,92 @@
+---
+title: "lab7_li"
+format: pdf
+editor: visual
+---
+1. Baixe o arquivo uwmadison.sqlite3. Conecte-se a ele usando o pacote RSQLite, armazenando a conexão em uma variável conn.
+```{r}
+library(DBI)
+library(RSQLite)
+conn <- dbConnect(SQLite(), "database.sqlite3")
+```
+
+```{r}
+dbListTables(conn)
+```
+
+2. Quem são e quantos são os professores que lecionaram disciplinas cujo tópico era estatística (subjects.abbreviation='STAT');
+```{sql connection=conn}
+SELECT DISTINCT i.name FROM SUBJECTS AS s
+INNER JOIN subject_memberships AS sm ON sm.subject_code = s.code
+INNER JOIN sections AS sec ON sec.course_offering_uuid = sm.course_offering_uuid
+INNER JOIN teachings AS t ON t.section_uuid = sec.uuid
+INNER JOIN instructors AS i ON i.id = t.instructor_id
+WHERE s.abbreviation = 'STAT'
+```
+
+```{sql connection=conn}
+SELECT COUNT(DISTINCT i.id) AS how_many_stat_instructors FROM SUBJECTS AS s
+INNER JOIN subject_memberships AS sm ON sm.subject_code = s.code
+INNER JOIN sections AS sec ON sec.course_offering_uuid = sm.course_offering_uuid
+INNER JOIN teachings AS t ON t.section_uuid = sec.uuid
+INNER JOIN instructors AS i ON i.id = t.instructor_id
+WHERE s.abbreviation = 'STAT'
+```
+
+3. O GPA americano é definido numa escala de 0 a 4, em que A = 4, AB = 3.5, B = 3, BC = 2.5, C = 2, D = 1 e F = 0. Determinando a nota média de cada oferecimento pela ponderação da quantidade de alunos em cada extrato com os valores numéricos de cada conceito, indique (no que se referente a disciplinas no assunto de estatística):
+
+Quem é o professor mais difícil?
+```{sql connection=conn}
+SELECT i.name FROM instructors AS i
+INNER JOIN teachings AS t ON t.instructor_id = i.id
+INNER JOIN sections AS s ON t.section_uuid = s.uuid
+INNER JOIN course_offerings AS co ON co.uuid = s.course_offering_uuid
+INNER JOIN grade_distributions AS gd ON co.uuid = gd.course_offering_uuid
+GROUP BY i.name
+ORDER BY SUM(gd.f_count) DESC
+LIMIT 1
+```
+
+Quem é o professor mais fácil?
+```{sql connection=conn}
+SELECT i.name FROM instructors AS i
+INNER JOIN teachings AS t ON t.instructor_id = i.id
+INNER JOIN sections AS s ON t.section_uuid = s.uuid
+INNER JOIN course_offerings AS co ON co.uuid = s.course_offering_uuid
+INNER JOIN grade_distributions AS gd ON co.uuid = gd.course_offering_uuid
+GROUP BY i.name
+ORDER BY SUM(gd.a_count) 
+LIMIT 1
+```
+
+Qual é a disciplina mais difícil?
+```{sql connection=conn}
+SELECT s.name FROM subjects AS s
+INNER JOIN subject_memberships AS sm ON sm.subject_code = s.code
+INNER JOIN course_offerings AS co ON co.uuid = sm.course_offering_uuid
+INNER JOIN grade_distributions AS gd ON co.uuid = gd.course_offering_uuid
+GROUP BY s.name
+ORDER BY SUM(f_count) DESC
+LIMIT 1
+```
+
+Qual é a disciplina mais fácil?
+```{sql connection=conn}
+SELECT s.name FROM subjects AS s
+INNER JOIN subject_memberships AS sm ON sm.subject_code = s.code
+INNER JOIN course_offerings AS co ON co.uuid = sm.course_offering_uuid
+INNER JOIN grade_distributions AS gd ON co.uuid = gd.course_offering_uuid
+GROUP BY s.name
+ORDER BY SUM(a_count) DESC
+LIMIT 1
+```
+4. Desconecte do banco de dados.
+```{r}
+dbDisconnect(conn)
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
+
